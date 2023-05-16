@@ -44,6 +44,9 @@ spec:
         - name: cicada-ldap
           imagePullPolicy: IfNotPresent
           image: jian659/cicada-ldap
+          resources:
+           limits:
+            memory: 100Mi
           ports:
             - containerPort: 7789
   selector:
@@ -67,6 +70,9 @@ spec:
         - name: cicada-keycloak
           imagePullPolicy: IfNotPresent
           image: jian659/cicada-keycloak
+          resources:
+           limits:
+            memory: 100Mi
           ports:
             - containerPort: 7796
               name: web-port
