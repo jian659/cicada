@@ -46,7 +46,7 @@ spec:
           image: jian659/cicada-ldap
           resources:
            limits:
-            memory: 100Mi
+            memory: 400Mi
           ports:
             - containerPort: 7789
   selector:
@@ -72,7 +72,7 @@ spec:
           image: jian659/cicada-keycloak
           resources:
            limits:
-            memory: 100Mi
+            memory: 500Mi
           ports:
             - containerPort: 7796
               name: web-port
