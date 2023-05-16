@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cicada-mongodb
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: cicada-mongodb
+    spec:
+      containers:
+        - name: cicada-mongodb
+          imagePullPolicy: IfNotPresent
+          image: 127.0.0.1:5000/cicada-mongo
+          ports:
+            - containerPort: 27017
+          envFrom:
+            - configMapRef:
+                name: cicada-config
+          env:
+            - name: MONGO_INITDB_ROOT_USERNAME
+              value: "$(MONGO_USER)"
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              value: "$(MONGO_PASSWORD)"
+            - name: MONGO_INITDB_DATABASE
+              value: "$(MONGO_DB)"
+            - name: MONGO_PORT
+              value: "$(MONGO_PORT)"
+      securityContext:
+        fsGroup: 999  # mongodb
+  selector:
+    matchLabels:
+      app: cicada-mongodb
+
+---
+

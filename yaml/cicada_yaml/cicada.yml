@@ -1,0 +1,172 @@
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cicada-mongodb-data
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: high-perf-ssd
+
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cicada-mongodb
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: cicada-mongodb
+    spec:
+      containers:
+        - name: cicada-mongodb
+          imagePullPolicy: IfNotPresent
+          image: 127.0.0.1:5000/cicada-mongo
+          ports:
+            - containerPort: 27017
+          envFrom:
+            - configMapRef:
+                name: cicada-config
+          env:
+            - name: MONGO_INITDB_ROOT_USERNAME
+              value: "$(MONGO_USER)"
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              value: "$(MONGO_PASSWORD)"
+            - name: MONGO_INITDB_DATABASE
+              value: "$(MONGO_DB)"
+            - name: MONGO_PORT
+              value: "$(MONGO_PORT)"
+          volumeMounts:
+            - mountPath: /data/db
+              name: mongodb-db
+      volumes:
+       - name: mongodb-db
+         persistentVolumeClaim:
+           claimName: cicada-mongodb-data
+           readOnly: false
+  selector:
+    matchLabels:
+      app: cicada-mongodb
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cicada-api
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: cicada-api
+    spec:
+      #initContainers:
+        # Wait other pod deployed
+        - name: wait-for-nfs
+          image: busybox:latest
+          imagePullPolicy: IfNotPresent
+          command: ['sh', '-c', 'until nc -vz ${POD_NAME} 2049; do echo "Waiting for nfs..."; sleep 3; done;']
+          env:
+            - name: POD_NAME
+              value: cicada-nfs
+        # Wait other pod deployed
+        - name: wait-for-mongo
+          image: busybox:latest
+          imagePullPolicy: IfNotPresent
+          command: ['sh', '-c', 'until nc -vz ${POD_NAME} 7797; do echo "Waiting for mongo..."; sleep 3; done;']
+          env:
+            - name: POD_NAME
+              value: cicada-mongo
+        - name: wait-for-nifi
+          image: 127.0.0.1:5000/busybox
+          imagePullPolicy: IfNotPresent
+          command: ['sh', '-c', 'until nc -vz ${POD_NAME} 7795; do echo "Waiting for nifi..."; sleep 3; done;']
+          env:
+            - name: POD_NAME
+              value: cicada-nifi
+      containers:
+        - name: cicada-api
+          imagePullPolicy: IfNotPresent
+          image: 127.0.0.1:5000/cicada-api-test
+          securityContext:
+            capabilities:
+              add:
+              - SYS_ADMIN
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: cicada-config
+          env:
+            - name: BIND
+              value: "0.0.0.0:8000"
+            - name: MAX_WORKERS
+              value: "4"
+            - name: TIMEOUT
+              value: "86400"
+            - name: ACCESS_LOG
+              value: "/app/gunicorn_access.log"
+            - name: ERROR_LOG
+              value: "/app/gunicorn_error.log"
+            - name: KEYCLOAK_HOST
+              value: "$(KEYCLOAK_HOST)"
+            - name: KEYCLOAK_PORT
+              value: "$(KEYCLOAK_PORT)"
+            - name: LDAP_HOST
+              value: "$(LDAP_HOST)"
+            - name: LDAP_PORT
+              value: "$(LDAP_PORT)"
+            - name: MONGO_HOST
+              value: "$(MONGO_HOST)"
+            - name: MONGO_PORT
+              value: "$(MONGO_PORT)"
+            - name: NIFI_HOST
+              # value: "$(NIFI_HOST)"
+              value: "cicada-nifi-service"
+            - name: NIFI_PORT
+              # value: "$(NIFI_PORT)"
+              value: "7795"
+            - name: NIFI_MAX_TIMER_DRIVENTHREADCOUNT
+              value: "$(NIFI_MAX_TIMER_DRIVENTHREADCOUNT)"
+            - name: NIFI_MAX_EVENT_DRIVENTHREADCOUNT
+              value: "$(NIFI_MAX_EVENT_DRIVENTHREADCOUNT)"
+            - name: PRE_START_PATH
+              value: "/app/deployment/prestart.sh"
+            - name: NFS_HOST
+              value: "$(NFS_HOST)"
+            - name: API_SHARE_FOLDER
+              value: "$(API_SHARE_FOLDER)"
+  selector:
+    matchLabels:
+      app: cicada-api
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cicada-web
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: cicada-web
+    spec:
+      containers:
+        - name: cicada-web
+          imagePullPolicy: IfNotPresent
+          image: 127.0.0.1:5000/cicada-web-test:1.0
+          ports:
+            - containerPort: 8000
+  selector:
+    matchLabels:
+      app: cicada-web

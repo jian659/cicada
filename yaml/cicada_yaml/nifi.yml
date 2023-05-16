@@ -1,0 +1,155 @@
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cicada-nifi-data
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+  storageClassName: high-perf-ssd
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: cicada-nifi-service
+  labels:
+    app: cicada-nifi-service
+spec:
+  type: ClusterIP
+  ports:
+  - port: 7795
+    name: client
+    targetPort: 8443
+  selector:
+    app: cicada-nifi
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cicada-nifi
+spec:
+  selector:
+    matchLabels:
+      app: cicada-nifi
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: cicada-nifi
+    spec:
+      containers:
+        - name: cicada-nifi
+          imagePullPolicy: IfNotPresent
+          image: 127.0.0.1:5000/cicada-nifi
+          securityContext:
+            capabilities:
+              add:
+              - SYS_ADMIN
+          ports:
+            - containerPort: 8443
+              name: web
+          envFrom:
+            - configMapRef:
+                name: cicada-config
+          env:
+            - name: LDAP_URL
+              value: "ldap://$(LDAP_HOST):$(LDAP_PORT)"
+            - name: LDAP_IDENTITY_STRATEGY
+              value: "USE_USERNAME"
+            - name: LDAP_IDENTITY_ATTRIBUTE
+              value: "uid"
+            - name: LDAP_USER_SEARCH_FILTER
+              value: "uid={0}"
+            - name: INITIAL_ADMIN_IDENTITY
+              value: "cicada"
+            - name: AUTH
+              value: "ldap"
+            - name: LDAP_AUTHENTICATION_STRATEGY
+              value: "SIMPLE"
+            - name: KEYSTORE_PATH
+              value: "/home/nifi/certs/keystore.p12"
+            - name: KEYSTORE_TYPE
+              value: "PKCS12"
+            - name: KEYSTORE_PASSWORD
+              value: "cd536b7a6276606a8a524967d9d28ac3"
+            - name: TRUSTSTORE_PATH
+              value: "/home/nifi/certs/truststore.p12"
+            - name: TRUSTSTORE_TYPE
+              value: "PKCS12"
+            - name: TRUSTSTORE_PASSWORD
+              value: "7fb8d73d95579ef6a06ee67640874a62"
+            - name: LDAP_USER_SEARCH_BASE
+              value: "$(LDAP_USER_SEARCH_BASE)"
+            - name: LDAP_MANAGER_DN
+              value: "$(LDAP_MANAGER_DN)"
+            - name: LDAP_MANAGER_PASSWORD
+              value: "$(LDAP_MANAGER_PASSWORD)"
+            - name: NIFI_WEB_PROXY_HOST
+              value: "cicada-nifi-service:7795"
+            - name: NIFI_JVM_HEAP_INIT
+              value: "$(NIFI_JVM_HEAP_INIT)"
+            - name: NIFI_JVM_HEAP_MAX
+              value: "$(NIFI_JVM_HEAP_MAX)"
+            - name: CICADA_API_PORT
+              value: "$(API_PORT)"
+            - name: NFS_HOST
+              value: "$(NFS_HOST)"
+            - name: API_SHARE_FOLDER
+              value: "$(API_SHARE_FOLDER)"
+          volumeMounts:
+            - name: nifi-conf
+              mountParh: /opt/nifi/nifi-current/conf
+            - name: nifi-state
+              mountPath: /opt/nifi/nifi-current/state
+            - name: nifi-flowfile-repo
+              mountPath: /opt/nifi/nifi-current/flowfile_repository
+            - name: nifi-content-repo
+              mountPath: /opt/nifi/nifi-current/content_repository
+            - name: nifi-provenance-repo
+              mountPath: /opt/nifi/nifi-current/provenance_repository
+            - name: nifi-database-repo
+              mountPath: /opt/nifi/nifi-current/database_repository
+            - name: nifi-logs
+              mountPath: /opt/nifi/nifi-current/logs
+            - name: nifi-status-repo
+              mountPath: /opt/nifi/nifi-current/status_repository
+      volumes:
+       - name: nifi-conf
+         persistentVolumeClaim:
+           claimName: cicada-nifi-data
+           readOnly: false
+       - name: nifi-state
+          persistentVolumeClaim:
+           claimName: cicada-nifi-data
+           readOnly: false
+       - name: nifi-flowfile-repo
+          persistentVolumeClaim:
+           claimName: cicada-nifi-data
+           readOnly: false
+       - name: nifi-content-repo
+          persistentVolumeClaim:
+           claimName: cicada-nifi-data
+           readOnly: false
+       - name: nifi-provenance-repo
+          persistentVolumeClaim:
+           claimName: cicada-nifi-data
+           readOnly: false
+       - name: nifi-database-repo
+          persistentVolumeClaim:
+           claimName: cicada-nifi-data
+           readOnly: false
+       - name: nifi-logs
+          persistentVolumeClaim:
+           claimName: cicada-nifi-data
+           readOnly: false
+       - name: nifi-status-repo
+          persistentVolumeClaim:
+           claimName: cicada-nifi-data
+           readOnly: false

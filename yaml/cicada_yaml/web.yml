@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cicada-web
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: cicada-web
+    spec:
+      containers:
+        - name: cicada-web
+          imagePullPolicy: IfNotPresent
+          image: 127.0.0.1:5000/cicada-web-test:1.0
+          ports:
+            - containerPort: 8000
+  selector:
+    matchLabels:
+      app: cicada-web
+

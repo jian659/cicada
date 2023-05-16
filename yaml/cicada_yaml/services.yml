@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: cicada-mongo
+spec:
+  selector:
+    app: cicada-mongodb
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      port: 7797
+      targetPort: 27017
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: cicada-api
+spec:
+  selector:
+    app: cicada-api
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      port: 7798
+      targetPort: 8000
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: cicada-web
+spec:
+  selector:
+    app: cicada-web
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      port: 7799
+      targetPort: 8000
+
+---

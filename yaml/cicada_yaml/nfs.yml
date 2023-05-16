@@ -1,0 +1,84 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cicada-nfs-share-folder
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: high-perf-ssd
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cicada-nfs
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: cicada-nfs
+    spec:
+      containers:
+        - name: cicada-nfs
+          imagePullPolicy: IfNotPresent
+          #image: erichough/nfs-server:latest
+          image: 127.0.0.1:5000/nfs-server
+          securityContext:
+            capabilities:
+              add: 
+              - SYS_ADMIN
+              - SYS_MODULE
+          ports:
+            - containerPort: 2049
+          env:
+            - name: NFS_EXPORT_0
+              value: "/mnt *(rw,sync,no_wdelay,no_root_squash,insecure,no_subtree_check,fsid=0)"
+          volumeMounts:
+            - mountPath: /mnt
+              name: mydata
+      volumes:
+       - name: mydata
+         persistentVolumeClaim:
+           claimName: cicada-nfs-share-folder
+           readOnly: false
+  selector:
+    matchLabels:
+      app: cicada-nfs
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: cicada-nfs
+spec:
+  selector:
+    app: cicada-nfs
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      port: 2049
+      targetPort: 2049 
+      name: tcp-2049
+    - protocol: UDP
+      port: 2049
+      targetPort: 2049
+      name: udp-2049
+    - protocol: UDP
+      port: 111
+      targetPort: 111
+      name: udp-111
+    - protocol: UDP
+      port: 32765
+      targetPort: 32765
+      name: rpc-statd
+    - protocol: UDP
+      port: 32767
+      targetPort: 32767
+      name: rpc-mountd
+

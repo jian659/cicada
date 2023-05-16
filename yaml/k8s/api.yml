@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cicada-api
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: cicada-api
+    spec:
+      containers:
+        - name: cicada-api
+          imagePullPolicy: IfNotPresent
+          image: 127.0.0.1:5000/cicada-api:latest
+          securityContext:
+            capabilities:
+              add:
+              - SYS_ADMIN
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: cicada-config
+          env:
+            - name: BIND
+              value: "0.0.0.0:8000"
+            - name: MAX_WORKERS
+              value: "4"
+            - name: TIMEOUT
+              value: "86400"
+            - name: ACCESS_LOG
+              value: "/app/gunicorn_access.log"
+            - name: ERROR_LOG
+              value: "/app/gunicorn_error.log"
+            - name: KEYCLOAK_HOST
+              value: "$(KEYCLOAK_HOST)"
+            - name: KEYCLOAK_PORT
+              value: "$(KEYCLOAK_PORT)"
+            - name: LDAP_HOST
+              value: "$(LDAP_HOST)"
+            - name: LDAP_PORT
+              value: "$(LDAP_PORT)"
+            - name: MONGO_HOST
+              value: "$(MONGO_HOST)"
+            - name: MONGO_PORT
+              value: "$(MONGO_PORT)"
+            - name: NIFI_HOST
+              # value: "$(NIFI_HOST)"
+              value: "cicada-nifi-service"
+            - name: NIFI_PORT
+              # value: "$(NIFI_PORT)"
+              value: "7795"
+            - name: NIFI_MAX_TIMER_DRIVENTHREADCOUNT
+              value: "$(NIFI_MAX_TIMER_DRIVENTHREADCOUNT)"
+            - name: NIFI_MAX_EVENT_DRIVENTHREADCOUNT
+              value: "$(NIFI_MAX_EVENT_DRIVENTHREADCOUNT)"
+            - name: PRE_START_PATH
+              value: "/app/deployment/prestart.sh"
+            - name: API_SHARE_FOLDER
+              value: "$(API_SHARE_FOLDER)"
+  selector:
+    matchLabels:
+      app: cicada-api
