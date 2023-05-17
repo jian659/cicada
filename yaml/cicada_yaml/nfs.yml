@@ -41,11 +41,18 @@ spec:
           volumeMounts:
             - mountPath: /mnt
               name: mydata
+            - mountPath: /lib/modules
+              name: module
       volumes:
        - name: mydata
          persistentVolumeClaim:
            claimName: cicada-nfs-share-folder
            readOnly: false
+       - name: module
+         hostPath:
+        # Ensure the file directory is created.
+            path: /lib/modules
+            type: DirectoryOrCreate
   selector:
     matchLabels:
       app: cicada-nfs
