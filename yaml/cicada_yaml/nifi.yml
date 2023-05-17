@@ -32,7 +32,7 @@ spec:
       containers:
         - name: cicada-nifi
           imagePullPolicy: IfNotPresent
-          image: 127.0.0.1:5000/cicada-nifi
+          image: jian659/cicada-nifi
           securityContext:
             capabilities:
               add:
