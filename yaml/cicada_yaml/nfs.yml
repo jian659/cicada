@@ -41,6 +41,8 @@ spec:
           volumeMounts:
             - mountPath: /mnt
               name: mydata
+          securityContext:
+            privileged: true
       volumes:
        - name: mydata
          persistentVolumeClaim:
